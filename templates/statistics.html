@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}消费统计{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <h2 class="text-center mb-4">消费统计</h2>
+        <div class="row g-3 align-items-center mb-4">
+            <div class="col-auto">
+                <label for="period" class="col-form-label">选择时间范围：</label>
+            </div>
+            <div class="col-auto">
+                <select id="period" name="period" class="form-select">
+                    <option value="day" {% if selected_period == 'day' %}selected{% endif %}>今天</option>
+                    <option value="7days" {% if selected_period == '7days' %}selected{% endif %}>最近七天</option>
+                    <option value="week" {% if selected_period == 'week' %}selected{% endif %}>本周</option>
+                    <option value="month" {% if selected_period == 'month' %}selected{% endif %}>本月</option>
+                    <option value="30days" {% if selected_period == '30days' %}selected{% endif %}>最近三十天</option>
+                    <option value="year" {% if selected_period == 'year' %}selected{% endif %}>最近一年</option>
+                </select>
+            </div>
+            <div class="col-auto">
+                <a href="{{ url_for('export_data', period=selected_period) }}" class="btn btn-success">导出 CSV</a>
+            </div>
+        </div>
+
+        <div class="text-center mb-4">
+            <label for="chart-type">选择图表类型：</label>
+            <select id="chart-type" class="form-select d-inline-block w-auto">
+                <option value="bar">柱状图</option>
+                <option value="line">折线图</option>
+            </select>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>{{ selected_period_label }}</h5>
+            </div>
+            <div class="card-body">
+                <p>总消费: <span id="total-expenses">{{ total_expenses }}</span>元</p>
+                <canvas id="main-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>消费类别占比</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="pie-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script>
+    // 初始化图表
+    let mainChart, pieChart;
+
+    function renderCharts(data) {
+        const mainCtx = document.getElementById('main-chart').getContext('2d');
+        const pieCtx = document.getElementById('pie-chart').getContext('2d');
+
+        // 销毁旧图表
+        if (mainChart) mainChart.destroy();
+        if (pieChart) pieChart.destroy();
+
+        // 主图表（柱状图/折线图）
+        mainChart = new Chart(mainCtx, {
+            type: document.getElementById('chart-type').value,
+            data: {
+                labels: data.mainLabels,
+                datasets: [{
+                    label: '消费金额',
+                    data: data.mainData,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // 饼状图
+        pieChart = new Chart(pieCtx, {
+            type: 'pie',
+            data: {
+                labels: data.pieLabels,
+                datasets: [{
+                    label: '消费金额',
+                    data: data.pieData,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.2)',
+                        'rgba(54, 162, 235, 0.2)',
+                        'rgba(255, 206, 86, 0.2)',
+                        'rgba(75, 192, 192, 0.2)',
+                        'rgba(153, 102, 255, 0.2)',
+                        'rgba(255, 159, 64, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)',
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(153, 102, 255, 1)',
+                        'rgba(255, 159, 64, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            }
+        });
+
+        // 更新总消费
+        document.getElementById('total-expenses').textContent = data.total_expenses;
+    }
+
+    // 初始化页面时渲染图表
+    renderCharts({
+        mainLabels: {{ main_labels | tojson }},
+        mainData: {{ main_data | tojson }},
+        pieLabels: {{ pie_labels | tojson }},
+        pieData: {{ pie_data | tojson }},
+        total_expenses: {{ total_expenses }}
+    });
+
+    // 监听时间范围选择
+    document.getElementById('period').addEventListener('change', function() {
+        const period = this.value;
+        axios.get(`/statistics/data?period=${period}`)
+            .then(response => {
+                renderCharts(response.data);
+            })
+            .catch(error => {
+                console.error('获取数据失败:', error);
+            });
+    });
+
+    // 监听图表类型选择
+    document.getElementById('chart-type').addEventListener('change', function() {
+        mainChart.config.type = this.value;
+        mainChart.update();
+    });
+</script>
+{% endblock content %}

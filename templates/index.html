@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}记账工具{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="text-center mb-4">添加消费记录</h2>
+        <form action="{{ url_for('add_expense') }}" method="POST">
+            <div class="mb-3">
+                <label for="date" class="form-label">日期</label>
+                <input type="datetime-local" class="form-control" id="datetime" name="datetime" required>
+            </div>
+            <div class="mb-3">
+                <label for="category" class="form-label">类别</label>
+                <input type="text" class="form-control" id="category" name="category" required>
+            </div>
+            <div class="mb-3">
+                <label for="amount" class="form-label">金额</label>
+                <input type="number" class="form-control" id="amount" name="amount" step="0.01" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">添加</button>
+        </form>
+    </div>
+</div>
+<script>
+    // 设置日期输入框的默认值为今天
+    const now = new Date();
+    const timezoneOffset = now.getTimezoneOffset() * 60000; // 转换为毫秒
+    const localISOTime = new Date(now - timezoneOffset).toISOString().slice(0, 16); // 格式化为 YYYY-MM-DDTHH:MM
+    document.getElementById('datetime').value = localISOTime;
+
+     // 根据当前时间设置类别默认值
+    const categoryInput = document.getElementById('category');
+    const currentHour = new Date().getHours();
+
+    if (currentHour >= 5 && currentHour < 11) {
+        categoryInput.value = '早餐';
+    } else if (currentHour >= 11 && currentHour < 15) {
+        categoryInput.value = '午餐';
+    } else {
+        categoryInput.value = '晚餐';
+    }
+</script>
+{% endblock %}
